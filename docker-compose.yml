@@ -1,0 +1,78 @@
+version: "3.5"
+services:
+
+  nginx:
+    build: ./config/nginx
+    image: nginx:newsproxy
+    ports:
+      - 8079:80
+    links:
+      - service-registry:service-registry
+      - news-config:news-config
+     
+  firefox:
+    build: ./config/firefox
+    image: firefox:newsbrowser
+    ports:
+      - 8084:5800
+    shm_size: '512mb'
+    links:
+      - news-service:news-service
+      - news-config:news-config
+    privileged: true
+
+      
+  news-service:
+    image: news
+    ports:
+      - 9800
+      
+  news-config:
+    image: config
+    ports:
+      - 8888
+      
+  service-registry:
+    image: registry
+    ports:
+      - 8761
+      
+  mongodb:
+    image : mongo
+    container_name: mongodb
+    environment:
+    - PUID=1000
+    - PGID=1000
+    volumes:
+    - /home/news/mongodb/database:/data/db
+    ports:
+    - 27017:27017
+    restart: unless-stopped
+          
+  mongo-express:
+    image: mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - MvE_CONFIG_MONGODB_PORT=27017
+    depends_on:
+      - mongodb
+    ports:
+      - "9888:8081"
+      
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - 8085:80
+      
+  db:
+    build: ./config/db
+    image: mysql:latest
+    ports:
+      - 3308:3306
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: octopus
+      MYSQL_DATABASE: 'subscription'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    volumes:
+      - /home/news/mysql/database:/var/lib/mysql
